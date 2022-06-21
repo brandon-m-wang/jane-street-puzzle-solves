@@ -177,13 +177,30 @@ def find_tiles_within_range(x, y, n):
 
 @lru_cache(maxsize=None)
 def find_tiles_with_distance(x, y, n):
-    tiles = set()
+    tiles = []
     for d_x in range(n):
         d_y = n - d_x
         possible_tiles = [(x + d_x, y + d_y), (x + d_x, y - d_y), (x - d_x, y + d_y), (x - d_x, y - d_y)]
         for tile in possible_tiles:
             if is_in_bounds(tile[0], tile[1]):
-                tiles.add(tile)
+                tiles.append(tile)
+    return tiles
+
+def find_tiles_with_distance_recursively(x, y, n, t, l, b, r, dist, tiles, seen):
+    if not is_in_bounds(x, y) or (x, y) in seen:
+        return
+    seen.add((x, y))
+    if dist == n:
+        tiles.append((x, y))
+        return
+    if t:
+        find_tiles_with_distance_recursively(x, y+1, n, t, l, False, r, dist+1, tiles, seen)
+    if l:
+        find_tiles_with_distance_recursively(x-1, y, n, t, l, b, False, dist+1, tiles, seen)
+    if b:
+        find_tiles_with_distance_recursively(x, y-1, n, False, l, b, r, dist+1, tiles, seen)
+    if r:
+        find_tiles_with_distance_recursively(x+1, y, n, t, False, b, r, dist+1, tiles, seen)
     return tiles
 
 def find_tiles_within_region(x, y):
@@ -193,6 +210,21 @@ def find_tiles_within_region(x, y):
         tiles.add(tile)
     tiles.remove((x, y))
     return tiles
+
+def validate_nearest_k():
+    def search(x, y, k):
+        print("\n", x, y, k)
+        found = False
+        for x2, y2 in find_tiles_with_distance_recursively(x, y, k, True, True, True, True, 0, [], set()):
+            print(list(coord_to_eligible[(x2, y2)])[0])
+            if list(coord_to_eligible[(x2, y2)])[0] == k:
+                found = True
+        return found
+    for i in range(10):
+        for j in range(10):
+            if not search(j, i, list(coord_to_eligible[(j, i)])[0]):
+                return False
+    return True
 
 
 queue = []
@@ -216,7 +248,7 @@ while queue:
             queue.append((x2, y2))
 
     potential = []
-    for x2, y2 in find_tiles_with_distance(x, y, k):
+    for x2, y2 in find_tiles_with_distance_recursively(x, y, k, True, True, True, True, 0, [], set()):
         if k in coord_to_eligible[(x2, y2)]:
             potential.append((x2, y2))
     if len(potential) == 1 and potential[0] not in completed:
@@ -234,5 +266,9 @@ for y, row in enumerate(rows[::-1]):
     for x in range(len(row)):
         row_mul *= row[x]
     ans += row_mul
-
-print(f"\n\nAnswer: {ans}")
+    
+if validate_nearest_k():
+    print_solved_grid()
+    print(f"\n\nAnswer: {ans}")
+else:
+    print("\n\nWrong")
